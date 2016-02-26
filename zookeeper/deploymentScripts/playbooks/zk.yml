@@ -1,0 +1,7 @@
+---
+- name: Deploy zookeeper service on zkCluster 
+  hosts: zkCluster
+  sudo: yes
+  sudo_user: root
+  roles:
+     - zk 

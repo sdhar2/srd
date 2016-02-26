@@ -1,0 +1,13 @@
+# http://www.thegeekstuff.com/2010/07/logrotate-examples
+# http://www.rackspace.com/knowledge_center/article/understanding-logrotate-utility
+
+/var/log/nerve/nerve*.log{
+    missingok
+    size 1k
+    copytruncate
+    daily
+    rotate 31
+    maxage 90
+    create 0777 root root
+    dateext
+}

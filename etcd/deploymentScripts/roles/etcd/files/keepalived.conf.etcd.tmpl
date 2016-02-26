@@ -1,0 +1,28 @@
+! Configuration File for keepalived etcd
+! Copyright 2015, Arris Inc
+
+vrrp_script chk_etcd {
+        script "/usr/sbin/check_generic etcd-v2.0.0-rc.1-linux-amd64"
+        interval 2
+        weight -51
+        fall 1       # require 2 failures for KO
+        rise 1       # require 2 successes for OK
+}
+
+vrrp_instance ETCD_1 {
+    state MASTER
+    interface eth0
+    virtual_router_id VRID_MACRO
+    priority PRIORITY_MACRO
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1111
+    }
+    track_script {
+         chk_etcd
+    }
+    virtual_ipaddress {
+        VIRTUAL_ETCD_IPADDRESS dev eth0
+    }
+}

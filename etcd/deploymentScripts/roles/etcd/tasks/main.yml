@@ -1,0 +1,77 @@
+---
+    - name: start etcd ELB check for AWS 
+      shell: nohup ./aws_elb_check "etcd-v2.0.0-rc.1-linux-amd64" 4002 >/dev/null 2>&1 &
+      when: AWS == "Y"
+      ignore_errors: true
+    - name: remove etcd_node_deploy file (pre)
+      command: rm -rf /tmp/etcd_node_deployed
+      ignore_errors: true
+    - name: copy the etcd keepalived template file
+      copy: src=keepalived.conf.etcd.tmpl dest=/etc/keepalived/keepalived.conf.etcd.tmpl mode=0755
+      when: single_vm_deployment == "no"
+    - name: update the priority on leader to 255
+      command: sed -i "s/PRIORITY_MACRO/255/g" /etc/keepalived/keepalived.conf.etcd.tmpl            
+      run_once: true
+      when: single_vm_deployment == "no"
+    - name: update the priority ip on config template file
+      command: sed -i "s/PRIORITY_MACRO/{{ansible_eth0.ipv4.address.split('.')[3]}}/g" /etc/keepalived/keepalived.conf.etcd.tmpl            
+      when: single_vm_deployment == "no"
+    - name: look up the ip of the VIP
+      shell: host etcdcluster | cut -d" " -f4 | cut -d. -f4  
+      register: vrid
+    - name: update the virtual router id on config template file
+      command: sed -i "s/VRID_MACRO/{{vrid.stdout}}/g" /etc/keepalived/keepalived.conf.etcd.tmpl            
+      when: single_vm_deployment == "no"
+    - name: copy the etcd compose file
+      copy: src=etcd-compose.yml dest=/arris/compose/etcd-compose.yml mode=0755
+    - name: look up the ELK DNS name
+      shell: nslookup elk | grep "elk" | awk '{ print $2}'  
+      register: nslookup
+    - name: update ELK DNS name on compose file
+      command: sed -i "s/ELK_DNSNAME_MACRO/{{nslookup.stdout}}/g" /arris/compose/etcd-compose.yml                 
+    - name: update the host ip on compose file
+      command: sed -i "s/HOST_IP_MACRO/{{ansible_eth0.ipv4.address}}/g" /arris/compose/etcd-compose.yml
+    - name: update the host name on compose file 
+      command: sed -i "s/HOST_NAME_MACRO/{{ansible_hostname}}/g" /arris/compose/etcd-compose.yml
+    - name: update the isLeader flag  on compose file
+      command: sed -i "s/IS_LEADER=false/IS_LEADER=true/g" /arris/compose/etcd-compose.yml
+      run_once: true
+    - name: Grab iptables rules for survey of firewall (INPUT rules only)
+      shell: iptables -n --list INPUT
+      register: iptablesinputtablerules
+      always_run: yes
+    - name: punch the holes in the firewall
+      command: iptables -I INPUT -p tcp --dport {{ item }} -j ACCEPT
+      when: iptablesinputtablerules.stdout.find("dpt:{{ item }}") == -1
+      with_items:
+         - 4001
+         - 7001
+         - 2380
+         - 2379
+         - 7501
+         - 8075
+         - 8077
+         - 7500
+      notify: save iptables
+    - name: pull the docker images from compose file
+      command: docker-compose -f /arris/compose/etcd-compose.yml pull --allow-insecure-ssl
+      async:  180
+    - name: start the compose file on master host
+      shell: docker-compose -f /arris/compose/etcd-compose.yml up -d 
+      when: inventory_hostname == "{{ play_hosts[0] }}"
+    - wait_for: timeout=30
+    - name: start the compose file on standby host(s)
+      shell: docker-compose -f /arris/compose/etcd-compose.yml up -d 
+      when: single_vm_deployment == "no" and inventory_hostname != "{{ play_hosts[0] }}"     
+    - wait_for: timeout=15
+    - name: kill the old status checker script if there is one
+      shell: killall etcd_status_checker.sh
+      ignore_errors: true
+    - name: start status checker script
+      shell: nohup /usr/sbin/etcd_status_checker.sh  &     
+    - name: keepalived
+      service: name=keepalived state=restarted
+      when: single_vm_deployment == "no"
+    - name: remove etcd_node_deploy file (post)
+      command: rm -rf /tmp/etcd_node_deployed
+      ignore_errors: true

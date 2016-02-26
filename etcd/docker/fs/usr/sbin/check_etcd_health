@@ -1,0 +1,33 @@
+#!/bin/bash
+####################################################################################
+#Copyright 2015 ARRIS Enterprises, Inc. All rights reserved.
+#This program is confidential and proprietary to ARRIS Enterprises, Inc. (ARRIS),
+#and may not be copied, reproduced, modified, disclosed to others, published or used,
+#in whole or in part, without the express prior written permission of ARRIS.
+####################################################################################
+## etcd Health Checker
+initialSleep=$1
+periodicity=$2
+if [ -z "$initialSleep" ]
+then
+        initialSleep=60
+fi
+
+if [ -z "$periodicity" ]
+then
+        periodicity=60
+fi
+
+ETCD_HOST=`host etcdCluster | cut -d " " -f4`:4001
+keyname=`echo $HOST_IP| cut -f2 -d: | cut -f2-4 -d.`
+etcdctl -no-sync -peers ${ETCD_HOST} set /health/srdaas/etcd/etcd${keyname} $HOST_IP -ttl `expr $initialSleep + 5`
+sleep $initialSleep
+while :
+do
+  result=`ps -eaf | grep -v grep | grep etcd-v2 | grep -v tail | grep -v dhclient | grep -v check | wc -l`
+  if [ "$result" -gt "0" ] 
+  then
+    etcdctl -no-sync -peers ${ETCD_HOST} set /health/srdaas/etcd/etcd${keyname} $HOST_IP -ttl `expr $periodicity + 5`
+  fi
+  sleep $periodicity
+done

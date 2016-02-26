@@ -1,0 +1,7 @@
+---
+- name: Deploy etcd service on etcdCluster 
+  hosts: etcdCluster
+  sudo: yes
+  sudo_user: root
+  roles:
+     - etcd 

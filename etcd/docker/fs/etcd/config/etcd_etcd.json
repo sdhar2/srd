@@ -1,0 +1,24 @@
+[
+{
+	 "Static":
+	  [
+	    {
+		"key": "/config/advisor/etcd@$VarHostName",
+		"value": "$VarHostIP:8075"    
+	    },
+	    {
+        "key": "/productGroups/etcd/etcd@$VarHostName",
+        "value": "$VarHostIP"
+        },
+	    {
+        "key": "/productGroups/srdaas/etcd@$VarHostName",
+        "value": "$VarHostIP"
+        }        
+	  ],
+	  "KeepAlive" :
+	  [
+	    {
+	    }
+	  ]
+	}
+] 

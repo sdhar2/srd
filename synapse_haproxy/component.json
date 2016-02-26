@@ -1,0 +1,9 @@
+[
+	{
+        "componentName":    "synapse-haproxy",
+        "componentDescr":   "ARRIS Cloud Platform: Synapse-HAProxy",
+        "containerName":    "arrs/arrs-cloud-base-synapse-haproxy",
+        "componentVersion": "2.0.0.0",
+        "installFileBase":  "arrs-cloud-servicediscovery-synapse-haproxy"
+	}
+]

@@ -1,0 +1,9 @@
+---
+    - name: keepalived
+      service:
+               name=keepalived
+               state=restarted
+               enabled=yes
+      
+    - name: save iptables
+      shell: service iptables save

@@ -1,0 +1,9 @@
+[
+	{
+        "componentName":    "etcd",
+        "componentDescr":   "ARRIS Cloud Platform: ETCD key-value store",
+        "containerName":    "arrs/arrs-cloud-base-etcd",
+        "componentVersion": "2.0.0.0",
+        "installFileBase":  "arrs-cloud-servicediscovery-etcd"
+	}
+]

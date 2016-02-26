@@ -1,0 +1,114 @@
+---
+    - name: copy the zookeeper keepalived template file
+      copy: src=keepalived.conf.zookeeper.tmpl dest=/etc/keepalived/keepalived.conf.zookeeper.tmpl mode=0755
+      when: single_vm_deployment == "no"
+    - name: update the priority ip on config template file
+      command: sed -i "s/PRIORITY_MACRO/{{ansible_eth0.ipv4.address.split('.')[3]}}/g" /etc/keepalived/keepalived.conf.zookeeper.tmpl      
+      when: single_vm_deployment == "no"
+    - name: look up the ip of the VIP
+      shell: host zookeepercluster | cut -d" " -f4 | cut -d. -f4  
+      register: vrid
+    - name: update the virtual router id on config template file
+      command: sed -i "s/VRID_MACRO/{{vrid.stdout}}/g" /etc/keepalived/keepalived.conf.zookeeper.tmpl            
+      when: single_vm_deployment == "no"
+    - name: keepalived
+      service: name=keepalived state=restarted
+      when: single_vm_deployment == "no"
+    - name: copy the zk compose file
+      copy: src=zk-compose.yml dest=/arris/compose/zk-compose.yml mode=0755
+    - name: update the host ip on compose file
+      command: sed -i "s/HOST_IP_MACRO/{{ansible_eth0.ipv4.address}}/g" /arris/compose/zk-compose.yml
+    - name: update the host name on compose file
+      command: sed -i "s/HOST_NAME_MACRO/{{ansible_hostname}}/g" /arris/compose/zk-compose.yml
+    - name: update the HA flag on compose file for multi-VM environment
+      command: sed -i "s/HAMODE_MACRO/HA/g" /arris/compose/zk-compose.yml
+      when: single_vm_deployment == "no"
+    - name: update the HA flag on compose file for single VM environment
+      command: sed -i "s/HAMODE_MACRO/off/g" /arris/compose/zk-compose.yml
+    - name: look up the ELK DNS name
+      shell: nslookup elk | grep "elk" | awk '{ print $2}'  
+      register: nslookup
+    - name: update ELK DNS name on compose file
+      command: sed -i "s/ELK_DNSNAME_MACRO/{{nslookup.stdout}}/g" /arris/compose/zk-compose.yml           
+    - name: Creates /opt/zoo directory
+      file: path=/opt/zoo/data state=directory
+    - name: remove the old my id file
+      file: path=/opt/zoo/data/myid state=absent
+      # Creats the id file for zookeeperCluster
+
+    - name: get first host
+      shell: echo "1" > /opt/zoo/data/myid
+      when:  inventory_hostname  == "{{ play_hosts[0] }}"
+      args: 
+        creates: /opt/zoo/data/myid
+    - name: get second host
+      shell: test "{{ play_hosts[1] }}" = "{{ inventory_hostname }}" && echo "2" > /opt/zoo/data/myid
+      when: single_vm_deployment == "no" and play_hosts[1] is defined
+      ignore_errors: true
+      args: 
+        creates: /opt/zoo/data/myid
+    - name: get third host
+      shell: test "{{ play_hosts[2] }}" = "{{ inventory_hostname }}" && echo "3" > /opt/zoo/data/myid
+      when: single_vm_deployment == "no" and play_hosts[2] is defined
+      ignore_errors: true
+      args: 
+        creates: /opt/zoo/data/myid
+      # Create the Zookeeper hosts file
+      #****** make sure to do replace zookeeper ids in etc/hosts dont append to file
+    - name: clean out legacy zookeeper entries in hosts
+      lineinfile: dest=/etc/hosts regexp="^%zookeeper[1-9]" state=absent
+    - name: set the id
+      lineinfile: dest=/etc/hosts line="{{ play_hosts[0] }} zookeeper1"
+    - name: set the id2
+      lineinfile: dest=/etc/hosts line="{{ play_hosts[1] }} zookeeper2"
+      when: single_vm_deployment == "no"  and play_hosts[1] is defined
+    - name: set the id3
+      lineinfile: dest=/etc/hosts line="{{ play_hosts[2] }} zookeeper3"
+      when: single_vm_deployment == "no" and play_hosts[2] is defined
+    - name: Grab iptables rules for survey of firewall (INPUT rules only)
+      shell: iptables -n --list INPUT
+      register: iptablesinputtablerules
+      always_run: yes
+    - name: punch the hole in the firewall for zk
+      command: iptables -I INPUT -p tcp --dport {{ item }} -j ACCEPT
+      when: iptablesinputtablerules.stdout.find( "dpt:{{ item }} " ) == -1
+      with_items:
+        - 2181
+        - 2888
+        - 3888
+        - 8675
+        - 8677
+        - 7506  
+      notify: save iptables
+    - name: pull the docker images form the compose file
+      command: docker-compose -f /arris/compose/zk-compose.yml pull 
+      async: 180 
+    - name: start the compose file
+      command: docker-compose -f /arris/compose/zk-compose.yml up -d
+    - name: pgrep zookeeper status
+      shell: pgrep zookeeper_status_checker.sh
+      register: status
+      changed_when: status.rc == 0
+      failed_when: status.rc >= 2
+
+    - name: kill status checker script
+      shell: killall zookeeper_status_checker.sh
+      when: status.stdout
+    - name: start status checker script
+      shell: nohup /usr/sbin/zookeeper_status_checker.sh  &  
+    - name: keepalived
+      service: name=keepalived state=restarted
+      when: single_vm_deployment == "no"
+# simple sanity check of the service on every node
+# http://zookeeper.apache.org/doc/trunk/zookeeperAdmin.html#sc_zkCommands
+#    - name: Wait for Zookeeper to start
+#      wait_for: host=127.0.0.1 port=2181 delay=5 state=present
+#
+#    - name: Check that zookeeper started correctly
+#      shell: echo ruok | nc 127.0.0.1 2181
+#      register: zk_ruok
+#
+#    - assert:
+#        that:
+#          - "'imok' in zk_ruok.stdout"
+  

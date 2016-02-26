@@ -1,0 +1,27 @@
+! Configuration File for keepalived zookeeper
+! Copyright 2015, Arris Inc
+
+vrrp_script chk_zookeep {
+	script "/usr/sbin/check_generic zookeeper"
+	interval 2
+	weight 2
+}
+
+vrrp_instance ZOO_1 {
+    state MASTER
+    interface eth0
+    virtual_router_id VRID_MACRO
+    priority PRIORITY_MACRO
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1111
+    }
+    track_script {
+	chk_zookeep
+    }
+    virtual_ipaddress {
+	VIRTUAL_ZOO_IPADDRESS dev eth0
+    }
+}
+

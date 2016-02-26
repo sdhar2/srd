@@ -1,0 +1,25 @@
+---
+- name: Restart etcd service on etcdCluster 
+  hosts: etcdCluster
+  sudo: yes
+  sudo_user: root
+  
+  tasks:
+  - name: Removes old etcd configuration
+    file: path=/var/lib/etcd state=absent
+    ignore_errors: yes
+     
+  - name: stop the etcd compose file
+    command: docker-compose -f /arris/compose/etcd-compose.yml stop
+    async: 60
+    poll: 10   
+     
+  - name: rm etcd 
+    command: docker-compose -f /arris/compose/etcd-compose.yml rm --force
+    async: 60
+    poll: 10   
+     
+  - name: start the etcd compose file
+    command: docker-compose -f /arris/compose/etcd-compose.yml up -d
+    async: 60
+    poll: 10       

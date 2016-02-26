@@ -1,0 +1,9 @@
+[
+	{
+        "componentName":    "zookeeper",
+        "componentDescr":   "ARRIS Cloud Platform: Zookeeper",
+        "containerName":    "arrs/arrs-cloud-base-zookeeper",
+        "componentVersion": "2.0.0.0",
+        "installFileBase":  "arrs-cloud-servicediscovery-zookeeper"
+	}
+]

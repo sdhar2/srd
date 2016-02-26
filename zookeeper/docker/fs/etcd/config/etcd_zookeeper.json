@@ -1,0 +1,22 @@
+[
+{
+	 "Static":
+	  [
+	    {
+		"key": "/config/advisor/zookeeper@$VarHostName",
+		"value": "$VarHostIP:8675"     
+	    },
+	    {
+        "key": "/productGroups/zookeeper/zookeeper@$VarHostName",
+        "value": "$VarHostIP"
+        },	    
+        {
+        "key": "/productGroups/srdaas/zookeeper@$VarHostName",
+        "value": "$VarHostIP"
+        }
+	  ],
+	  "KeepAlive":
+	  [
+	  ]
+	}
+] 

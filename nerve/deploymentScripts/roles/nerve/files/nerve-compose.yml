@@ -1,0 +1,13 @@
+arrs-nerve:
+  image: dockerrepo:5000/arrs/arrs-cloud-base-nerve:2.0.0.21
+  stdin_open: true
+  tty: true
+  restart: always
+  privileged: true
+  log_driver: "json-file"
+  log_opt:
+   max-size: "100m"
+   max-file: "10" 
+  volumes:
+  - /var/log/nerve:/var/log/nerve
+

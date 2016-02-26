@@ -1,0 +1,9 @@
+[
+	{
+        "componentName":    "nerve",
+        "componentDescr":   "ARRIS Cloud Platform: Nerve",
+        "containerName":    "arrs/arrs-cloud-base-nerve",
+        "componentVersion": "2.0.0.0",
+        "installFileBase":  "arrs-cloud-servicediscovery-nerve"
+	}
+]

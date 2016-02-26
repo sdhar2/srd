@@ -1,0 +1,108 @@
+zookeeper:
+  image: dockerrepo:5000/arrs/arrs-cloud-base-zookeeper:2.0.0.1
+  stdin_open: true
+  tty: true
+  net: "host"
+  restart: always
+  privileged: true
+  log_driver: "json-file"
+  log_opt:
+   max-size: "100m"
+   max-file: "10"
+  ports:
+  - "2181:2181"
+  - "2888:2888"
+  - "3888:3888"
+  environment:
+  - HOST_IP=HOST_IP_MACRO
+  - HAMode=HAMODE_MACRO
+  - MONITOR_PORT=8675
+  volumes:
+  - /opt/etcd/config:/opt/etcd/config
+  - /var/log/zookeeper:/tmp
+  - /opt/zoo:/opt/zookeeper-3.4.6
+
+appObserverZookeeper:
+  image: dockerrepo:5000/arrs/arrs-cloud-base-app-observer:2.1.0.2
+  restart: always
+  privileged: true
+  log_driver: "json-file"
+  log_opt:
+   max-size: "100m"
+   max-file: "10"
+  ports:
+   - "8675:8675"
+   - "8677:8677"
+  environment:
+   SECURE_PORT: 8675
+   NON_SECURE_PORT: 8677
+   PRODUCT_NAME: ACP-ZOOKEEPER
+   APP_WEBSERVICE_FQDN: HOST_IP_MACRO
+   APP_WEBSERVICE_PORT: 7506
+  volumes:
+   - /var/opt/app-observer-zookeeper/config:/opt/app-observer/conf/external
+   - /var/opt/app-observer-zookeeper/logs:/opt/app-observer/logs
+
+zookeeperapp:
+  image: dockerrepo:5000/arrs/arrs-cloud-base-zookeeper-app-monitor:2.0.0.2
+  stdin_open: true
+  tty: true
+  restart: always
+  privileged: true
+  log_driver: "json-file"
+  log_opt:
+   max-size: "100m"
+   max-file: "10"
+  ports:
+  - "7506:7506"
+  environment:
+  - HOST_NAME=HOST_NAME_MACRO
+  - LISTEN_PORT=7506
+  - APP_OBSERVER_PORT=8677
+  - HOST_IP=HOST_IP_MACRO
+  - HOST_NAME=HOST_NAME_MACRO  
+  volumes:
+  - /usr/sbin:/usr/local/sbin
+  - /var/log/app_monitor/zookeeper:/tmp
+  - /var/opt/app-monitor-zookeeper/perf-monitor/logs:/opt/perf_monitor/logs
+  - /var/opt/app-monitor-zookeeper/status-monitor/logs:/opt/status_monitor/logs
+  
+keymanager:
+  image: dockerrepo:5000/arrs/arrs-cloud-base-keymanager:2.0.0.2
+  stdin_open: true
+  tty: true
+  restart: always
+  privileged: true
+  log_driver: "json-file"
+  log_opt:
+   max-size: "100m"
+   max-file: "10"
+  environment:
+  - HOST_IP=HOST_IP_MACRO
+  - HOST_NAME=HOST_NAME_MACRO
+  volumes:
+   - /var/log:/tmp
+  volumes_from:
+  - zookeeper
+
+logstashforwarder:
+  image: dockerrepo:5000/arrs/arrs-cloud-base-logstash-forwarder:2.1.0.2
+  restart: always
+  privileged: true
+  log_driver: "json-file"
+  log_opt:
+   max-size: "100m"
+   max-file: "10"
+  environment:
+   LS_HEAP_SIZE: 1g
+   CA_CERT_LOCATION: /etc/elk-keys/ca.pem
+   ES_HOST: ELK_DNSNAME_MACRO
+   NODE_NAME: HOST_IP_MACRO
+  volumes:
+   - /var/opt/logstash-forwarder/log:/var/log/supervisor
+   - /var/opt/logstash-forwarder/conf:/etc/logstash-forwarder
+   - /var/opt/logstash-forwarder/keys:/etc/elk-keys
+   - /etc/localtime:/etc/localtime:ro
+  volumes_from:
+   - zookeeper
+   - appObserverZookeeper 

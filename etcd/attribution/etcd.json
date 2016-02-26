@@ -1,0 +1,24 @@
+{
+    "ossAttribution": {
+        "product": "EtcdDiscovery",
+        "productVersion": "1.1.0.1",
+        "entries": [
+            {
+                "component": "ETCD",
+                "componentVersion": "2.0",
+                "componentUrl": "https://coreos.com/",
+                "license": "Apache 2.0",
+                "licenseUrl": "licenses/apache-license-2.0.txt",
+                "notice": ""
+            },
+            {
+                "component": "confd",
+                "componentVersion": "0.5.0",
+                "componentUrl": "https://github.com/kelseyhightower/confd/releases",
+                "license": "Apache 2.0",
+                "licenseUrl": "licenses/apache-license-2.0.txt",
+                "notice": ""
+            }     
+        ]
+    }
+}
